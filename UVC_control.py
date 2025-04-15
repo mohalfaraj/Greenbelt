@@ -10,6 +10,7 @@ pipeline = dai.Pipeline()
 cam = pipeline.create(dai.node.ColorCamera)
 cam.setBoardSocket(dai.CameraBoardSocket.CAM_B)  # Use CAM_B on OAK-D SR
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
+cam.setVideoSize(640, 640)
 cam.setInterleaved(False)
 cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
