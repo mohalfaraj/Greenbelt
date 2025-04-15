@@ -13,7 +13,7 @@ import cv2
 from pathlib import Path
 from models.common import DetectMultiBackend
 from utils.datasets import LoadStreams
-from utils.general import check_img_size, non_max_suppression, scale_boxes, cv2
+from utils.general import check_img_size, non_max_suppression, scale_coords, cv2
 from utils.torch_utils import select_device
 from utils.general import xyxy2xywh
 from utils.plots import colors, Annotator
@@ -60,7 +60,7 @@ def main():
 
             if len(det):
                 # Rescale boxes to original image size
-                det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()
+                det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
 
                 for *xyxy, conf, cls in det:
                     x1, y1, x2, y2 = map(int, xyxy)
