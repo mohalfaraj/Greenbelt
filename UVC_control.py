@@ -25,7 +25,7 @@ controlIn.out.link(cam.inputControl)
 
 # UVC output config
 config = dai.Device.Config()
-config.board.uvc = dai.BoardConfig.UVC(1280, 800)
+config.board.uvc = dai.BoardConfig.UVC(640, 640)
 config.board.uvc.frameType = dai.ImgFrame.Type.NV12
 pipeline.setBoardConfig(config.board)
 
