@@ -7,6 +7,27 @@ from utils.general import non_max_suppression, scale_coords, check_img_size
 from utils.torch_utils import select_device
 from utils.plots import Annotator, colors
 
+def reduce_glare_clahe(frame):
+    lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    cl = clahe.apply(l)
+
+    limg = cv2.merge((cl, a, b))
+    return cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
+
+def adaptive_gamma(frame):
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(hsv)
+
+    mean = np.mean(v)
+    gamma = np.log10(0.5*255) / np.log10(mean if mean > 0 else 1)
+    v = np.array(255 * ((v / 255) ** gamma), dtype='uint8')
+
+    hsv_corrected = cv2.merge((h, s, v))
+    return cv2.cvtColor(hsv_corrected, cv2.COLOR_HSV2BGR)
+
 def main():
     # Initialize DepthAI pipeline
     pipeline = dai.Pipeline()
@@ -43,7 +64,6 @@ def main():
         ctrl.setSaturation(0)
         ctrlQueue.send(ctrl)
 
-
         # Load YOLOv5 model
         weights = 'best_half.torchscript'
         imgsz = [640, 640]
@@ -66,6 +86,20 @@ def main():
             frame_count += 1
             if frame_count % 10 != 0:
                 continue
+            
+            gray = cv2.cvtColor(im0, cv2.COLOR_BGR2GRAY)
+            brightness = np.mean(gray)
+
+            # Optional: visualize brightness level
+            #cv2.putText(im0, f"Brightness: {brightness:.1f}", (10, 30),
+            #            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+
+            # Apply brightening only if scene is dim
+            if brightness < 70:
+                im0 = cv2.convertScaleAbs(im0, alpha=1.2, beta=40)
+
+            im = reduce_glare_clahe(im)
+            im = adaptive_gamma(im)
 
             # Preprocess frame
             im = cv2.resize(im0, imgsz)
