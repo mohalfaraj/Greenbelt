@@ -16,6 +16,8 @@ def main():
     color_cam.setVideoSize(640, 640)
     color_cam.setInterleaved(False)
     color_cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+    color_cam.setAutoExposureEnable()
+    color_cam.setAutoWhiteBalanceMode(dai.CameraControl.AutoWhiteBalanceMode.AUTO)
 
     xout = pipeline.create(dai.node.XLinkOut)
     xout.setStreamName("color")
