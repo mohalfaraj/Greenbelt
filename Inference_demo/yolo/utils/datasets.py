@@ -247,6 +247,11 @@ class LoadWebcam:  # for inference
         self.cap = cv2.VideoCapture(self.pipe)  # video capture object
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 3)  # set buffer size
 
+        self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
+        self.cap.set(cv2.CAP_PROP_EXPOSURE, -6)
+        self.cap.set(cv2.CAP_PROP_GAIN, 0)
+        self.cap.set(cv2.CAP_PROP_BRIGHTNESS, 0.2)
+
     def __iter__(self):
         self.count = -1
         return self

@@ -24,7 +24,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 from models.common import DetectMultiBackend
-from utils.datasets import LoadStreams
+from utils.datasets import LoadStreams, LoadWebcam
 from utils.general import check_img_size, non_max_suppression, scale_coords, cv2
 from utils.torch_utils import select_device
 from utils.general import xyxy2xywh
@@ -49,9 +49,9 @@ def main():
     imgsz = check_img_size(imgsz, s=stride)
 
     # Load webcam stream
-    dataset = LoadStreams(source, img_size=imgsz, stride=stride, auto=model.pt)
+    dataset = LoadWebcam(source, img_size=imgsz, stride=stride)
     frame_count = 0 
-    for path, im, im0s, vid_cap, s in dataset:
+    for _, im, im0s, _, _ in dataset:
         frame_count += 1
         if frame_count % 10 != 0:
             continue   
