@@ -44,16 +44,17 @@ def main():
         if frame_count % 10 != 0:
             continue   
         im = torch.from_numpy(im).to(device)
-        im = im.half() if model.fp16 else im.float()
+        im =  im.float()
         im /= 255.0
         if im.ndimension() == 3:
             im = im.unsqueeze(0)
-    
-        pred = model(im)
-        pred = non_max_suppression(pred, conf_thres, iou_thres)
+       
+        with torch.no_grad():
+            pred = model(im)
+            pred = non_max_suppression(pred, conf_thres, iou_thres)
 
         for i, det in enumerate(pred):
-            im0 = im0s[i].copy()
+            im0 = im0s[i]
             annotator = Annotator(im0, line_width=2, example=str(names))
             frame_width = im0.shape[1]
 
@@ -84,6 +85,9 @@ def main():
             # Print filtered class names
             if filtered_classes:
                 print("Detected:", filtered_classes)
+        
+        del im, pred 
+        torch.cuda.empty_cache()
 
         if cv2.waitKey(1) == ord('q'):
             break
