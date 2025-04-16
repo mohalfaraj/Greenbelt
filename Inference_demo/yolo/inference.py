@@ -19,7 +19,7 @@ from utils.general import xyxy2xywh
 from utils.plots import colors, Annotator
 
 def main():
-    weights = 'best.pt'        # path to your .pt model
+    weights = 'best.torchcast'        # path to your .pt model
     source = '0'                  # webcam
     imgsz = (640, 640)            # input size
     conf_thres = 0.5             # confidence threshold
