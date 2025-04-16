@@ -250,10 +250,10 @@ class LoadWebcam:  # for inference
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, float(img_size))
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, float(img_size))
 
-        self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
-        self.cap.set(cv2.CAP_PROP_EXPOSURE, -3)
-        self.cap.set(cv2.CAP_PROP_GAIN, 0)
-        self.cap.set(cv2.CAP_PROP_BRIGHTNESS, 0.2)
+       # self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
+       # self.cap.set(cv2.CAP_PROP_EXPOSURE, -1)
+      #  self.cap.set(cv2.CAP_PROP_GAIN, 20)
+       # self.cap.set(cv2.CAP_PROP_BRIGHTNESS, 0.8)
 
     def __iter__(self):
         self.count = -1
@@ -270,7 +270,7 @@ class LoadWebcam:  # for inference
         ret_val, img0 = self.cap.read()
         img0 = cv2.flip(img0, 1)  # flip left-right
 
-        img0 = letterbox(img0, new_shape=(640, 640), auto=False)[0]
+       #  img0 = letterbox(img0, new_shape=(640, 640), auto=False)[0]
 
         # Print
         assert ret_val, f'Camera Error {self.pipe}'

@@ -29,8 +29,10 @@ from utils.general import check_img_size, non_max_suppression, scale_coords, cv2
 from utils.torch_utils import select_device
 from utils.general import xyxy2xywh
 from utils.plots import colors, Annotator
+import os 
 
 def main():
+    im_save_path = r'/home/jetson/Desktop/Capstone/capstone/static'
     weights = 'best_half.torchscript'        # path to your .pt model
     source = '0'                  # webcam
     imgsz = (640, 640)            # input size
@@ -39,7 +41,7 @@ def main():
 
     # Define x-axis horizontal region (in pixels)
     x_min = 100
-    x_max = 400
+    x_max = 500
 
     # Load model
     device = select_device('')
@@ -53,10 +55,9 @@ def main():
     frame_count = 0 
     for _, im, im0s, _, _ in dataset:
         frame_count += 1
-        if frame_count % 10 != 0:
+        if frame_count % 15 != 0:
             continue
-        print('im0', im0s.shape)
-        print('from webcam', im.shape)
+        
         if len(im.shape) > 3:
             im = im.squeeze(0)
         
@@ -69,7 +70,6 @@ def main():
         if im.ndimension() <= 3:
             im = im.unsqueeze(0)
         
-        print('to model', im.shape)
         with torch.no_grad():
             pred = model(im)
             pred = non_max_suppression(pred, conf_thres, iou_thres)
@@ -101,8 +101,8 @@ def main():
             cv2.line(im0, (x_max, 0), (x_max, im0.shape[0]), (0, 255, 0), 2)
 
             # Show result
-            print('anotator', annotator.result().shape)
-            cv2.imshow("YOLOv5 Detection", annotator.result())
+            cv2.imwrite(os.path.join(im_save_path, "frame.jpeg"), annotator.result())
+           #  cv2.imshow("YOLOv5 Detection", annotator.result())
 
             # Print filtered class names
             if filtered_classes:
