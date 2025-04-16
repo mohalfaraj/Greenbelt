@@ -26,7 +26,7 @@ def main():
         q = device.getOutputQueue(name="color", maxSize=4, blocking=False)
 
         # Load YOLOv5 model
-        weights = 'best.torchscript'
+        weights = 'best_half.torchscript'
         imgsz = (640, 640)
         conf_thres = 0.5
         iou_thres = 0.45
@@ -51,17 +51,18 @@ def main():
             im = cv2.resize(im0, imgsz)
             im = im.transpose((2, 0, 1))  # HWC to CHW
             im = np.ascontiguousarray(im)
-            im = torch.from_numpy(im).to(device_torch).float() / 255.0
+            im = torch.from_numpy(im).to(device_torch).half() / 255.0
             if im.ndimension() == 3:
                 im = im.unsqueeze(0)
             
             # Run YOLOv5 inference
-            pred = model(im)[0]
+            with torch.no_grad():
+                pred = model(im)
 
-            if pred.ndim == 2:
-                pred = pred.unsqueeze(0)
+           # if pred.ndim == 2:
+           #     pred = pred.unsqueeze(0)
 
-            pred = non_max_suppression(pred, conf_thres, iou_thres)
+                pred = non_max_suppression(pred, conf_thres, iou_thres)
 
             for i, det in enumerate(pred):
                 annotator = Annotator(im0.copy(), line_width=2, example=str(names))
@@ -83,7 +84,9 @@ def main():
                 cv2.imshow("YOLOv5 Detection", annotator.result())
                 if filtered_classes:
                     print("Detected:", filtered_classes)
-
+            
+            del im, pred 
+            torch.cuda.empty_cache()
             if cv2.waitKey(1) == ord('q'):
                 break
 
