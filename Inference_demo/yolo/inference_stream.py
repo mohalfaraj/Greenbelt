@@ -53,9 +53,13 @@ def main():
             im = torch.from_numpy(im).to(device_torch).float() / 255.0
             if im.ndimension() == 3:
                 im = im.unsqueeze(0)
-
+            
             # Run YOLOv5 inference
             pred = model(im)[0]
+
+            if pred.ndim == 2:
+                pred = pred.unsqueeze(0)
+                
             pred = non_max_suppression(pred, conf_thres, iou_thres)
 
             for i, det in enumerate(pred):
