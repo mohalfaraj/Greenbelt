@@ -16,8 +16,10 @@ def main():
     color_cam.setVideoSize(640, 640)
     color_cam.setInterleaved(False)
     color_cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-    color_cam.setAutoExposureEnable()
-    color_cam.setAutoWhiteBalanceMode(dai.CameraControl.AutoWhiteBalanceMode.AUTO)
+    
+    controlIn = pipeline.create(dai.node.XLinkIn)
+    controlIn.setStreamName("control")
+    controlIn.out.link(color_cam.inputControl)
 
     xout = pipeline.create(dai.node.XLinkOut)
     xout.setStreamName("color")
@@ -26,6 +28,16 @@ def main():
     # Start DepthAI device
     with dai.Device(pipeline) as device:
         q = device.getOutputQueue(name="color", maxSize=4, blocking=False)
+        ctrlQueue = device.getInputQueue("control")
+
+        ctrl = dai.CameraControl()
+        ctrl.setAutoExposureEnable()
+        ctrlQueue.send(ctrl)
+
+        ctrl = dai.CameraControl()
+        ctrl.setAutoWhiteBalanceMode(dai.CameraControl.AutoWhiteBalanceMode.AUTO)
+        ctrlQueue.send(ctrl)
+
 
         # Load YOLOv5 model
         weights = 'best_half.torchscript'
