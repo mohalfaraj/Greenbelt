@@ -251,7 +251,7 @@ class LoadWebcam:  # for inference
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, float(img_size))
 
         self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
-        self.cap.set(cv2.CAP_PROP_EXPOSURE, -6)
+        self.cap.set(cv2.CAP_PROP_EXPOSURE, -3)
         self.cap.set(cv2.CAP_PROP_GAIN, 0)
         self.cap.set(cv2.CAP_PROP_BRIGHTNESS, 0.2)
 
@@ -270,6 +270,8 @@ class LoadWebcam:  # for inference
         ret_val, img0 = self.cap.read()
         img0 = cv2.flip(img0, 1)  # flip left-right
 
+        img0 = letterbox(img0, new_shape=(640, 640), auto=False)[0]
+
         # Print
         assert ret_val, f'Camera Error {self.pipe}'
         img_path = 'webcam.jpg'
@@ -277,9 +279,11 @@ class LoadWebcam:  # for inference
 
         # Padded resize
         img = letterbox(img0, self.img_size, stride=self.stride, auto=False)[0]
-        print("letterbox, ", img.shape)
+       
         # Convert
-        img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
+        img = img[:,:,::-1]
+        img = img.transpose((2,0,1))
+        # img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
         img = np.ascontiguousarray(img)
 
         return img_path, img, img0, None, s

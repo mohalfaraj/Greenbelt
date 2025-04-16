@@ -38,8 +38,8 @@ def main():
     iou_thres = 0.45              # NMS threshold
 
     # Define x-axis horizontal region (in pixels)
-    x_min = 200
-    x_max = 540
+    x_min = 100
+    x_max = 400
 
     # Load model
     device = select_device('')
@@ -54,7 +54,9 @@ def main():
     for _, im, im0s, _, _ in dataset:
         frame_count += 1
         if frame_count % 10 != 0:
-            continue   
+            continue
+        print('im0', im0s.shape)
+        print('from webcam', im.shape)
         if len(im.shape) > 3:
             im = im.squeeze(0)
         
@@ -62,20 +64,20 @@ def main():
         im = reduce_glare_clahe(im)
         im = adaptive_gamma(im)
         im = np.transpose(im, (2,0,1))
-        im = torch.from_numpy(im).to(device)
-        im =  im.half()
-        im /= 255.0
+        im = torch.from_numpy(im).to(device).half() / 255.0
+
         if im.ndimension() <= 3:
             im = im.unsqueeze(0)
         
+        print('to model', im.shape)
         with torch.no_grad():
             pred = model(im)
             pred = non_max_suppression(pred, conf_thres, iou_thres)
 
         for i, det in enumerate(pred):
-            im0 = im0s[i]
+            im0 = im0s
             annotator = Annotator(im0, line_width=2, example=str(names))
-            frame_width = im0.shape[1]
+            frame_width = im0.shape
 
             filtered_classes = []
 
@@ -99,6 +101,7 @@ def main():
             cv2.line(im0, (x_max, 0), (x_max, im0.shape[0]), (0, 255, 0), 2)
 
             # Show result
+            print('anotator', annotator.result().shape)
             cv2.imshow("YOLOv5 Detection", annotator.result())
 
             # Print filtered class names
