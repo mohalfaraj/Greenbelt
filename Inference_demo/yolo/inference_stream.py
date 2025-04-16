@@ -38,18 +38,19 @@ def main():
         ctrl.setAutoWhiteBalanceMode(dai.CameraControl.AutoWhiteBalanceMode.AUTO)
         ctrlQueue.send(ctrl)
 
-        # ctrl.setBrightness(2)
-        ctrl.setSharpness(3)
-        ctrl.setSaturation(2)
+        ctrl.setBrightness(1)
+        ctrl.setSharpness(5)
+        ctrl.setSaturation(0)
         ctrlQueue.send(ctrl)
 
 
         # Load YOLOv5 model
         weights = 'best_half.torchscript'
-        imgsz = (640, 640)
+        imgsz = [640, 640]
         conf_thres = 0.5
         iou_thres = 0.45
-        x_min, x_max = 200, 540
+        # look at whole image for debuggingn
+        x_min, x_max = 0, 640
 
         device_torch = select_device('')
         model = DetectMultiBackend(weights, device=device_torch)
