@@ -49,13 +49,15 @@ def main():
     imgsz = check_img_size(imgsz, s=stride)
 
     # Load webcam stream
-    dataset = LoadWebcam(source, img_size=imgsz, stride=stride)
+    dataset = LoadWebcam(source, img_size=imgsz[0], stride=stride)
     frame_count = 0 
     for _, im, im0s, _, _ in dataset:
         frame_count += 1
         if frame_count % 10 != 0:
             continue   
-        im = im.squeeze(0)
+        if len(im.shape) > 3:
+            im = im.squeeze(0)
+        
         im = np.transpose(im, (1,2,0))
         im = reduce_glare_clahe(im)
         im = adaptive_gamma(im)
@@ -111,3 +113,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

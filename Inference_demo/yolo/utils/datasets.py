@@ -246,6 +246,9 @@ class LoadWebcam:  # for inference
         self.pipe = eval(pipe) if pipe.isnumeric() else pipe
         self.cap = cv2.VideoCapture(self.pipe)  # video capture object
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 3)  # set buffer size
+        
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, float(img_size))
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, float(img_size))
 
         self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
         self.cap.set(cv2.CAP_PROP_EXPOSURE, -6)
@@ -273,8 +276,8 @@ class LoadWebcam:  # for inference
         s = f'webcam {self.count}: '
 
         # Padded resize
-        img = letterbox(img0, self.img_size, stride=self.stride)[0]
-
+        img = letterbox(img0, self.img_size, stride=self.stride, auto=False)[0]
+        print("letterbox, ", img.shape)
         # Convert
         img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
         img = np.ascontiguousarray(img)
