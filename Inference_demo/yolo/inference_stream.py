@@ -34,6 +34,7 @@ def main():
 
         device_torch = select_device('')
         model = DetectMultiBackend(weights, device=device_torch)
+        model.names = [name for _, name in sorted(model.names.items())]
         stride, names = model.stride, model.names
         imgsz = check_img_size(imgsz, s=stride)
 
@@ -59,7 +60,7 @@ def main():
 
             if pred.ndim == 2:
                 pred = pred.unsqueeze(0)
-                
+
             pred = non_max_suppression(pred, conf_thres, iou_thres)
 
             for i, det in enumerate(pred):

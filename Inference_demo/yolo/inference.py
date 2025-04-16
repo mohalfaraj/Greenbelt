@@ -19,7 +19,7 @@ from utils.general import xyxy2xywh
 from utils.plots import colors, Annotator
 
 def main():
-    weights = 'best.torchscript'        # path to your .pt model
+    weights = 'best.pt'        # path to your .pt model
     source = '0'                  # webcam
     imgsz = (640, 640)            # input size
     conf_thres = 0.5             # confidence threshold
@@ -32,6 +32,7 @@ def main():
     # Load model
     device = select_device('')
     model = DetectMultiBackend(weights, device=device)
+    model.names = [name for _, name in sorted(model.names.items())]
     stride, names = model.stride, model.names
     imgsz = check_img_size(imgsz, s=stride)
 
@@ -43,7 +44,7 @@ def main():
         if frame_count % 10 != 0:
             continue   
         im = torch.from_numpy(im).to(device)
-        im = im.float()
+        im = im.half() if model.fp16 else im.float()
         im /= 255.0
         if im.ndimension() == 3:
             im = im.unsqueeze(0)
