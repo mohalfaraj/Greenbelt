@@ -108,37 +108,62 @@ def main():
             
             del im, pred 
             torch.cuda.empty_cache()
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord('q'):
-                break
 
-            # Camera control keys
+            key = cv2.waitKey(1) & 0xFF
             ctrl = dai.CameraControl()
 
-            if key == ord('e'):  # Increase exposure
-                ctrl.setManualExposure(20000, 800)
-                ctrlQueue.send(ctrl)
-            elif key == ord('d'):  # Decrease exposure
-                ctrl.setManualExposure(10000, 800)
-                ctrlQueue.send(ctrl)
+            # Exposure time and ISO state tracking
+            if 'exposure_us' not in locals():
+                exposure_us = 10000  # in microseconds
+                iso = 800
+                brightness = 2
+                saturation = 2
+                sharpness = 2
+
+            updated = False
+
+            if key == ord('q'):
+                break
+            elif key == ord('i'):  # Increase exposure
+                exposure_us = min(exposure_us + 1000, 33000)
+                updated = True
+            elif key == ord('k'):  # Decrease exposure
+                exposure_us = max(exposure_us - 1000, 1000)
+                updated = True
+            elif key == ord('o'):  # Increase ISO
+                iso = min(iso + 100, 1600)
+                updated = True
+            elif key == ord('l'):  # Decrease ISO
+                iso = max(iso - 100, 100)
+                updated = True
             elif key == ord('b'):  # Increase brightness
-                ctrl.setBrightness(5)
+                brightness = min(brightness + 1, 8)
+                ctrl.setBrightness(brightness)
                 ctrlQueue.send(ctrl)
             elif key == ord('n'):  # Decrease brightness
-                ctrl.setBrightness(0)
+                brightness = max(brightness - 1, 0)
+                ctrl.setBrightness(brightness)
                 ctrlQueue.send(ctrl)
             elif key == ord('s'):  # Increase saturation
-                ctrl.setSaturation(3)
+                saturation = min(saturation + 1, 4)
+                ctrl.setSaturation(saturation)
                 ctrlQueue.send(ctrl)
             elif key == ord('a'):  # Decrease saturation
-                ctrl.setSaturation(0)
+                saturation = max(saturation - 1, 0)
+                ctrl.setSaturation(saturation)
                 ctrlQueue.send(ctrl)
-            elif key == ord('z'):  # Toggle auto-exposure on
+            elif key == ord('z'):  # Toggle auto-exposure
                 ctrl.setAutoExposureEnable()
                 ctrlQueue.send(ctrl)
-            elif key == ord('x'):  # Toggle auto white balance on
+            elif key == ord('x'):  # Toggle auto white-balance
                 ctrl.setAutoWhiteBalanceMode(dai.CameraControl.AutoWhiteBalanceMode.AUTO)
                 ctrlQueue.send(ctrl)
+
+            # Apply manual exposure and ISO if updated
+            if updated:
+                ctrl.setManualExposure(exposure_us, iso)
+                ctrlQueue.send(ctrl)
+                print(f"[Manual] Exposure: {exposure_us}us | ISO: {iso}")
 
             #if cv2.waitKey(1) == ord('q'):
             #    break
