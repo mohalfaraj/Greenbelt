@@ -38,6 +38,11 @@ def main():
         ctrl.setAutoWhiteBalanceMode(dai.CameraControl.AutoWhiteBalanceMode.AUTO)
         ctrlQueue.send(ctrl)
 
+        # ctrl.setBrightness(2)
+        ctrl.setSharpness(3)
+        ctrl.setSaturation(2)
+        ctrlQueue.send(ctrl)
+
 
         # Load YOLOv5 model
         weights = 'best_half.torchscript'

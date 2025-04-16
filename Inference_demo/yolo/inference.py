@@ -8,8 +8,20 @@ def reduce_glare_clahe(frame):
     limg = cv2.merge((cl, a, b))
     return cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
 
+def adaptive_gamma(frame):
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(hsv)
+
+    mean = np.mean(v)
+    gamma = np.log10(0.5*255) / np.log10(mean if mean > 0 else 1)
+    v = np.array(255 * ((v / 255) ** gamma), dtype='uint8')
+
+    hsv_corrected = cv2.merge((h, s, v))
+    return cv2.cvtColor(hsv_corrected, cv2.COLOR_HSV2BGR)
+    
 import torch
 import cv2
+import numpy as np
 from pathlib import Path
 from models.common import DetectMultiBackend
 from utils.datasets import LoadStreams
@@ -43,12 +55,17 @@ def main():
         frame_count += 1
         if frame_count % 10 != 0:
             continue   
+        im = im.squeeze(0)
+        im = np.transpose(im, (1,2,0))
+        im = reduce_glare_clahe(im)
+        im = adaptive_gamma(im)
+        im = np.transpose(im, (2,0,1))
         im = torch.from_numpy(im).to(device)
         im =  im.half()
         im /= 255.0
-        if im.ndimension() == 3:
+        if im.ndimension() <= 3:
             im = im.unsqueeze(0)
-       
+        
         with torch.no_grad():
             pred = model(im)
             pred = non_max_suppression(pred, conf_thres, iou_thres)
