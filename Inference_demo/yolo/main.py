@@ -11,6 +11,7 @@ from utils.general import xyxy2xywh
 from utils.plots import colors, Annotator
 import time 
 import os 
+import serial 
 
 # Define x-axis horizontal region (in pixels)
 x_min = 100
@@ -101,6 +102,7 @@ def main():
                     'Recyclable – Metal' : 1,
                     'Recyclable – Paper': 2}
     servo_move = 0 
+    arduino_port = '/dev/ttyACM0' 
 
     # Load model
     device = select_device('')
@@ -151,6 +153,12 @@ def main():
                 print(f"Detected: {filtered_classes} with index {class_idx}")
 
                 # move servo based on class_idx
+                # Open a serial connection to the Arduino
+                with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
+                    # A brief pause to ensure the connection is ready
+                    time.sleep(0.5)
+                    # Send the command (e.g. "ON" or "OFF")
+                    arduino.write((str(class_idx) + "\n").encode())
         
         del im, pred 
         torch.cuda.empty_cache()
