@@ -15,7 +15,8 @@ import os
 # Define x-axis horizontal region (in pixels)
 x_min = 100
 x_max = 500
-y_min = 320 
+y_min = 120 
+y_max = 460 
 
 def reduce_glare_clahe(frame):
     lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
@@ -65,11 +66,13 @@ def filter_pred(det, im, im0, names, annotator, servo_move):
 
         for *xyxy, conf, cls in det:
             x1, y1, x2, y2 = map(int, xyxy)
-
+            
             # Filter: box must be fully within horizontal bounds
-            if x1 >= x_min and x2 <= x_max and y1 <= y_min:
+            if x1 >= x_min and x2 <= x_max:
                 if conf > 0.5:
                     class_id = int(cls)
+                    label = f"{names[class_id]} {conf:.2f}"
+                    annotator.box_label((x1, y1, x2, y2), label, color=colors(class_id, True))
                     filtered_detections.append((y1, x1, y2, x2, conf, class_id))
 
         # Sort detections by y1 (top to bottom)
@@ -78,10 +81,8 @@ def filter_pred(det, im, im0, names, annotator, servo_move):
         # Annotate and collect sorted class names
         filtered_classes = []
         for y1, x1, y2, x2, conf, class_id in filtered_detections:
-            if abs(servo_move - time.time()) < 2: 
+            if abs(servo_move - time.time()) < 2 or y1 < y_min or y1 > y_max: 
                 continue 
-            label = f"{names[class_id]} {conf:.2f}"
-            annotator.box_label((x1, y1, x2, y2), label, color=colors(class_id, True))
             filtered_classes.append(names[class_id])
         if len(filtered_classes):
             filtered_classes = filtered_classes[0]
@@ -104,7 +105,7 @@ def main():
     # Load model
     device = select_device('')
     model = DetectMultiBackend(weights, device=device)
-    model.names = [name for _, name in sorted(model.names.items())]
+   # model.names = [name for _, name in sorted(model.names.items())]
     stride, names = model.stride, model.names
     imgsz = check_img_size(imgsz, s=stride)
 
@@ -132,10 +133,10 @@ def main():
             # Draw vertical lines to visualize horizontal detection zone
             if debug: 
                 # horizontal bounding lines
-                cv2.line(im0, (x_min, 0), (x_min, im0.shape[0]), (0, 255, 0), 2)
-                cv2.line(im0, (x_max, 0), (x_max, im0.shape[0]), (0, 255, 0), 2)
+                cv2.line(annotator.result(), (x_min, 0), (x_min, im0.shape[0]), (0, 255, 0), 2)
+                cv2.line(annotator.result(), (x_max, 0), (x_max, im0.shape[0]), (0, 255, 0), 2)
                 # vertical bounding line 
-                cv2.line(im0, (0, y_min), (im0.shape[1], y_min), (0, 255, 0), 2)
+                cv2.line(annotator.result(), (0, y_min), (im0.shape[1], y_min), (0, 255, 0), 2)
 
             # sending to UI for display 
             if not debug: 
