@@ -15,7 +15,7 @@ import os
 # Define x-axis horizontal region (in pixels)
 x_min = 100
 x_max = 500
-y_min = 120 
+y_min = 200 
 y_max = 460 
 
 def reduce_glare_clahe(frame):
@@ -81,7 +81,7 @@ def filter_pred(det, im, im0, names, annotator, servo_move):
         # Annotate and collect sorted class names
         filtered_classes = []
         for y1, x1, y2, x2, conf, class_id in filtered_detections:
-            if abs(servo_move - time.time()) < 2 or y1 < y_min or y1 > y_max: 
+            if abs(servo_move - time.time()) < 2 or y2 < y_min or y2 > y_max: 
                 continue 
             filtered_classes.append(names[class_id])
         if len(filtered_classes):
@@ -114,7 +114,7 @@ def main():
     frame_count = 0 
     for _, im, im0s, _, _ in dataset:
         frame_count += 1
-        if frame_count % 15 != 0:
+        if frame_count % 5 != 0:
             continue
         
         im = process_image(im, device)

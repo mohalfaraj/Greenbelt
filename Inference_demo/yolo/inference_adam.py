@@ -33,20 +33,20 @@ import os
 
 def main():
     im_save_path = r'/home/jetson/Desktop/Capstone/capstone/static'
-    weights = 'best_half.torchscript'        # path to your .pt model
+    weights = 'best_adam.torchscript'        # path to your .pt model
     source = '0'                  # webcam
     imgsz = (640, 640)            # input size
     conf_thres = 0.5             # confidence threshold
     iou_thres = 0.45              # NMS threshold
 
     # Define x-axis horizontal region (in pixels)
-    x_min = 100
-    x_max = 500
+    x_min = 0
+    x_max = 640
 
     # Load model
     device = select_device('')
     model = DetectMultiBackend(weights, device=device)
-    model.names = [name for _, name in sorted(model.names.items())]
+    #model.names = [name for _, name in sorted(model.names.items())]
     stride, names = model.stride, model.names
     imgsz = check_img_size(imgsz, s=stride)
 

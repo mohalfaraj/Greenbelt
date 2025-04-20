@@ -98,11 +98,11 @@ def main():
             if brightness < 70:
                 im0 = cv2.convertScaleAbs(im0, alpha=1.2, beta=40)
 
-            im = reduce_glare_clahe(im)
+            im = reduce_glare_clahe(im0)
             im = adaptive_gamma(im)
 
             # Preprocess frame
-            im = cv2.resize(im0, imgsz)
+            im = cv2.resize(im, imgsz)
             im = im.transpose((2, 0, 1))  # HWC to CHW
             im = np.ascontiguousarray(im)
             im = torch.from_numpy(im).to(device_torch).half() / 255.0
@@ -153,6 +153,7 @@ def main():
                 brightness = 2
                 saturation = 2
                 sharpness = 2
+                contrast = 0
 
             updated = False
 
@@ -192,6 +193,16 @@ def main():
             elif key == ord('x'):  # Toggle auto white-balance
                 ctrl.setAutoWhiteBalanceMode(dai.CameraControl.AutoWhiteBalanceMode.AUTO)
                 ctrlQueue.send(ctrl)
+            elif key == ord('c'):  # inc contrast
+                contrast = max(contrast+1, 10)
+                ctrl.setContrast(contrast)
+                ctrlQueue.send(ctrl)
+            elif key == ord('v'):  # dec contrast
+                contrast = min(contrast-1, 0)
+                ctrl.setContrast(contrast)
+                ctrlQueue.send(ctrl)
+
+
 
             # Apply manual exposure and ISO if updated
             if updated:
