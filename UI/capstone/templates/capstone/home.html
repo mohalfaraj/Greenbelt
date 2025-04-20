@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'capstone/home.css' %}">
+    <title>Green Belt</title>
+</head>
+
+<body>
+    <h1>GreenBelt</h1>
+    <div class="subtext"> Control motor speed! </div>
+    <div class = "container">
+    <div class = "left-content">
+
+    <div> </br> </div>
+    <form  method="POST" action="">
+      {% csrf_token %}
+      <div class="speed-controller-container">
+        <label for="speedSlider" class="speed-controller-label">Set Motor Speed</label>
+        <input  
+          name = "speed"
+          type="range"
+          id="speedSlider"
+          min="0"
+          max="100"
+          value="{{speed}}"
+          class="speed-slider"
+          oninput="document.getElementById('speed').textContent = this.value"
+        />
+      <div></div>
+      <span id = "submitText"> The speed is currently <span id="speed"> {{speed}} </span></span>
+      <div></div>
+      <button type = "submit" onclick="this.classList.toggle('clicked')" value= "{{speed}}" id="speedButton">Click here to submit</button>
+    </form> 
+    </div>
+    </div>
+    <div> 
+    </div>
+    <div class = "right-container">
+    <img id="liveFeed" src="{% static 'frame.jpeg' %}" width="400" height="310">  </img> 
+    <script>
+      setInterval(() => {
+          document.getElementById("liveFeed").src = "{% static 'frame.jpeg' %}?t=" + new Date().getTime();
+      }, 500); 
+    </script>
+  </div>
+  </div>
+</body>
+</html>
