@@ -98,9 +98,9 @@ def main():
     imgsz = [640, 640]            # input size
     conf_thres = 0.5             # confidence threshold
     iou_thres = 0.45              # NMS threshold
-    classes_dict = {'Recyclable – Plastic': 0,
-                    'Recyclable – Metal' : 1,
-                    'Recyclable – Paper': 2}
+    classes_dict = {'Recyclable – Plastic': 101,
+                    'Recyclable – Metal' : 102,
+                    'Recyclable – Paper': 103}
     servo_move = 0 
     arduino_port = '/dev/ttyACM0' 
 
@@ -149,8 +149,8 @@ def main():
             # Print filtered class names
             if filtered_classes:
                 servo_move = time.time()
-                class_idx = classes_dict.get(filtered_classes, 3)
-                print(f"Detected: {filtered_classes} with index {class_idx}")
+                class_idx = classes_dict.get(filtered_classes, 104)
+                print(f"Detected: {filtered_classes} with index identifier {class_idx}")
 
                 # move servo based on class_idx
                 # Open a serial connection to the Arduino
