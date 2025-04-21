@@ -82,7 +82,7 @@ def filter_pred(det, im, im0, names, annotator, servo_move):
         # Annotate and collect sorted class names
         filtered_classes = []
         for y1, x1, y2, x2, conf, class_id in filtered_detections:
-            if abs(servo_move - time.time()) < 2 or y2 < y_min or y2 > y_max: 
+            if abs(servo_move - time.time()) < 10 or y2 < y_min or y2 > y_max: 
                 continue 
             filtered_classes.append(names[class_id])
         if len(filtered_classes):
@@ -141,23 +141,24 @@ def main():
                 cv2.line(annotator.result(), (0, y_min), (im0.shape[1], y_min), (0, 255, 0), 2)
 
             # sending to UI for display 
-            if not debug: 
-                cv2.imwrite(os.path.join(im_save_path, "frame.jpeg"), annotator.result())
+            #if debug: 
+            #    cv2.imwrite(os.path.join(im_save_path, "frame.jpeg"), annotator.result())
             if debug:
                 cv2.imshow("YOLOv5 Detection", annotator.result())
 
             # Print filtered class names
             if filtered_classes:
                 servo_move = time.time()
-                class_idx = classes_dict.get(filtered_classes, 104)
+                class_idx = classes_dict.get(filtered_classes, -1)
                 print(f"Detected: {filtered_classes} with index identifier {class_idx}")
 
                 # move servo based on class_idx
                 # Open a serial connection to the Arduino
                 with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
                     # A brief pause to ensure the connection is ready
-                    time.sleep(0.5)
+                    time.sleep(2)
                     # Send the command (e.g. "ON" or "OFF")
+                    print("sending: " + str(class_idx) + "\n")
                     arduino.write((str(class_idx) + "\n").encode())
         
         del im, pred 
