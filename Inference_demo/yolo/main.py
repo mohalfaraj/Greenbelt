@@ -120,6 +120,7 @@ def main():
     prev_time = time.time()
     with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
         time.sleep(2)
+        background_frame = None 
         for _, im, im0s, _, _ in dataset:
             #time.sleep(0.1)
             frame_count += 1
@@ -128,7 +129,6 @@ def main():
            # prev_time = curr_time
             if frame_count % 10 != 0:
                 continue
-            
             
             #process_start_time = time.time()
             im = process_image(im, device)

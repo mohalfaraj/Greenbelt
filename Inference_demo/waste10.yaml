@@ -1,0 +1,19 @@
+# waste10.yaml
+
+train: images/train
+val: images/val
+test: images/test
+
+nc: 10
+names:
+  - Not Recyclable # 3
+  - Food Waste # 3 
+  - Recyclable – Glass # 3 
+  - Recyclable – Textile # 3 
+  - Recyclable – Metal # 1 
+  - Recyclable – Wood # 3 
+  - Recyclable – Leather # 3 
+  - Recyclable – Plastic # 0
+  - Recyclable – Ceramic # 3 
+  - Recyclable – Paper # 2
+
