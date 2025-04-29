@@ -150,7 +150,7 @@ def main():
                 # Print filtered class names
                 if filtered_classes:
                     servo_move = time.time()
-                    class_idx = classes_dict.get(filtered_classes, -1)
+                    class_idx = classes_dict.get(filtered_classes, 104)
                     print(f"Detected: {filtered_classes} with index identifier {class_idx}")
 
                     # move servo based on class_idx
