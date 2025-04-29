@@ -16,7 +16,7 @@ import serial
 # Define x-axis horizontal region (in pixels)
 x_min = 90
 x_max = 560
-y_min = 160 
+y_min = 80 
 y_max = 480 
 default_time = 4
 
@@ -40,6 +40,8 @@ def adaptive_gamma(frame):
 
     hsv_corrected = cv2.merge((h, s, v))
     return cv2.cvtColor(hsv_corrected, cv2.COLOR_HSV2BGR)
+
+
 
 def process_image(im, device): 
     if len(im.shape) > 3:
@@ -117,28 +119,39 @@ def main():
     frame_count = 0 
     prev_time = time.time()
     with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
+        time.sleep(2)
         for _, im, im0s, _, _ in dataset:
             #time.sleep(0.1)
             frame_count += 1
-            curr_time = time.time()
-            print("seen image at time ", abs(curr_time - prev_time), "at frame ", frame_count)
-            prev_time = curr_time
+            #curr_time = time.time()
+           # print("seen image at time ", abs(curr_time - prev_time), "at frame ", frame_count)
+           # prev_time = curr_time
             if frame_count % 10 != 0:
                 continue
             
+            
+            #process_start_time = time.time()
             im = process_image(im, device)
-            continue 
+            #print(f"took {time.time() - process_start_time} for processing")
+
+            #inference_start_time = time.time()
             with torch.no_grad():
                 pred = model(im)
                 pred = non_max_suppression(pred, conf_thres, iou_thres)
-
-            for det in pred:
+            
+            #print(f"took {time.time() - inference_start_time} for inference")
+            
+            #post_start_time = time.time()
+            for det in pred:   
                 im0 = im0s
                 annotator = Annotator(im0, line_width=2, example=str(names))
                 frame_width = im0.shape
-
+                
+                #ref = time.time()
                 filtered_classes, annotator = filter_pred(det, im, im0, names, annotator, servo_move)
                 
+               # print(f"took {time.time() - ref} for filter_pred")
+
                 # Draw vertical lines to visualize horizontal detection zone
                 if debug: 
                     # horizontal bounding lines
@@ -148,12 +161,15 @@ def main():
                     cv2.line(annotator.result(), (0, y_min), (im0.shape[1], y_min), (0, 255, 0), 2)
 
                 # sending to UI for display 
-                #if debug: 
-                #    cv2.imwrite(os.path.join(im_save_path, "frame.jpeg"), annotator.result())
-               # if debug:
-               #     cv2.imshow("YOLOv5 Detection", annotator.result())
+                if debug: 
+                    cv2.imwrite(os.path.join(im_save_path, "tmp_frame.jpeg"), annotator.result())
+                    os.replace(os.path.join(im_save_path, 'tmp_frame.jpeg'), os.path.join(im_save_path, "frame.jpeg"))
+
+                #if debug:
+                #    cv2.imshow("YOLOv5 Detection", annotator.result())
 
                 # Print filtered class names
+                #ref = time.time() 
                 if filtered_classes:
                     servo_move = time.time()
                     class_idx = classes_dict.get(filtered_classes, 104)
@@ -163,7 +179,6 @@ def main():
                     # Open a serial connection to the Arduino
                     #with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
                     # A brief pause to ensure the connection is ready
-                    time.sleep(2)
                     arduino.write((str(class_idx) + "\n").encode())
                 # move back to default position just in case 
                 elif abs(servo_move - time.time()) > default_time:
@@ -175,9 +190,11 @@ def main():
                     # Open a serial connection to the Arduino
                     #with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
                     # A brief pause to ensure the connection is ready
-                    time.sleep(2)
                     arduino.write((str(class_idx) + "\n").encode())
+
+                #print(f"took {time.time() - ref} for arduino")
             
+           # print(f"time taken for post {time.time() - post_start_time}")
             del im, pred 
             torch.cuda.empty_cache()
 

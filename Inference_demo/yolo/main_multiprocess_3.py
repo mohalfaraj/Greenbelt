@@ -83,8 +83,6 @@ def filter_pred(
     im, im0, names,
     annotator,
     servo_move,
-    x_min, x_max,      # detection zone
-    y_min, y_max,
     conf_thres=0.5,
     time_guard=2.0,
     color_cache={}     # mutable default OK – acts as memo
