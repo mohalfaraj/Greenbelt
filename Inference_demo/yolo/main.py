@@ -14,10 +14,11 @@ import os
 import serial 
 
 # Define x-axis horizontal region (in pixels)
-x_min = 100
-x_max = 500
-y_min = 200 
-y_max = 460 
+x_min = 90
+x_max = 560
+y_min = 160 
+y_max = 480 
+default_time = 4
 
 def reduce_glare_clahe(frame):
     lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
@@ -98,8 +99,8 @@ def main():
     imgsz = [640, 640]            # input size
     conf_thres = 0.5             # confidence threshold
     iou_thres = 0.45              # NMS threshold
-    classes_dict = {'Recyclable – Plastic': 101,
-                    'Recyclable – Metal' : 102,
+    classes_dict = {'Recyclable – Plastic': 102,
+                    'Recyclable – Metal' : 101,
                     'Recyclable – Paper': 103}
     servo_move = 0 
     arduino_port = '/dev/ttyACM0' 
@@ -114,14 +115,19 @@ def main():
     # Load webcam stream
     dataset = LoadWebcam(source, img_size=imgsz[0], stride=stride)
     frame_count = 0 
+    prev_time = time.time()
     with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
         for _, im, im0s, _, _ in dataset:
+            #time.sleep(0.1)
             frame_count += 1
-            if frame_count % 5 != 0:
+            curr_time = time.time()
+            print("seen image at time ", abs(curr_time - prev_time), "at frame ", frame_count)
+            prev_time = curr_time
+            if frame_count % 10 != 0:
                 continue
             
             im = process_image(im, device)
-            
+            continue 
             with torch.no_grad():
                 pred = model(im)
                 pred = non_max_suppression(pred, conf_thres, iou_thres)
@@ -144,8 +150,8 @@ def main():
                 # sending to UI for display 
                 #if debug: 
                 #    cv2.imwrite(os.path.join(im_save_path, "frame.jpeg"), annotator.result())
-                if debug:
-                    cv2.imshow("YOLOv5 Detection", annotator.result())
+               # if debug:
+               #     cv2.imshow("YOLOv5 Detection", annotator.result())
 
                 # Print filtered class names
                 if filtered_classes:
@@ -160,10 +166,10 @@ def main():
                     time.sleep(2)
                     arduino.write((str(class_idx) + "\n").encode())
                 # move back to default position just in case 
-                elif abs(servo_move - time.time()) < 4:
+                elif abs(servo_move - time.time()) > default_time:
                     servo_move = time.time()
                     class_idx = 104
-                    print(f"Moving back to trash position")
+                    # print(f"Moving back to trash position")
 
                     # move servo based on class_idx
                     # Open a serial connection to the Arduino
