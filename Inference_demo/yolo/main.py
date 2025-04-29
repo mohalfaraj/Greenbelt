@@ -114,58 +114,59 @@ def main():
     # Load webcam stream
     dataset = LoadWebcam(source, img_size=imgsz[0], stride=stride)
     frame_count = 0 
-    for _, im, im0s, _, _ in dataset:
-        frame_count += 1
-        if frame_count % 5 != 0:
-            continue
-        
-        im = process_image(im, device)
-        
-        with torch.no_grad():
-            pred = model(im)
-            pred = non_max_suppression(pred, conf_thres, iou_thres)
-
-        for det in pred:
-            im0 = im0s
-            annotator = Annotator(im0, line_width=2, example=str(names))
-            frame_width = im0.shape
-
-            filtered_classes, annotator = filter_pred(det, im, im0, names, annotator, servo_move)
+    with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
+        for _, im, im0s, _, _ in dataset:
+            frame_count += 1
+            if frame_count % 5 != 0:
+                continue
             
-            # Draw vertical lines to visualize horizontal detection zone
-            if debug: 
-                # horizontal bounding lines
-                cv2.line(annotator.result(), (x_min, 0), (x_min, im0.shape[0]), (0, 255, 0), 2)
-                cv2.line(annotator.result(), (x_max, 0), (x_max, im0.shape[0]), (0, 255, 0), 2)
-                # vertical bounding line 
-                cv2.line(annotator.result(), (0, y_min), (im0.shape[1], y_min), (0, 255, 0), 2)
+            im = process_image(im, device)
+            
+            with torch.no_grad():
+                pred = model(im)
+                pred = non_max_suppression(pred, conf_thres, iou_thres)
 
-            # sending to UI for display 
-            #if debug: 
-            #    cv2.imwrite(os.path.join(im_save_path, "frame.jpeg"), annotator.result())
-            if debug:
-                cv2.imshow("YOLOv5 Detection", annotator.result())
+            for det in pred:
+                im0 = im0s
+                annotator = Annotator(im0, line_width=2, example=str(names))
+                frame_width = im0.shape
 
-            # Print filtered class names
-            if filtered_classes:
-                servo_move = time.time()
-                class_idx = classes_dict.get(filtered_classes, -1)
-                print(f"Detected: {filtered_classes} with index identifier {class_idx}")
+                filtered_classes, annotator = filter_pred(det, im, im0, names, annotator, servo_move)
+                
+                # Draw vertical lines to visualize horizontal detection zone
+                if debug: 
+                    # horizontal bounding lines
+                    cv2.line(annotator.result(), (x_min, 0), (x_min, im0.shape[0]), (0, 255, 0), 2)
+                    cv2.line(annotator.result(), (x_max, 0), (x_max, im0.shape[0]), (0, 255, 0), 2)
+                    # vertical bounding line 
+                    cv2.line(annotator.result(), (0, y_min), (im0.shape[1], y_min), (0, 255, 0), 2)
 
-                # move servo based on class_idx
-                # Open a serial connection to the Arduino
-                with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
+                # sending to UI for display 
+                #if debug: 
+                #    cv2.imwrite(os.path.join(im_save_path, "frame.jpeg"), annotator.result())
+                if debug:
+                    cv2.imshow("YOLOv5 Detection", annotator.result())
+
+                # Print filtered class names
+                if filtered_classes:
+                    servo_move = time.time()
+                    class_idx = classes_dict.get(filtered_classes, -1)
+                    print(f"Detected: {filtered_classes} with index identifier {class_idx}")
+
+                    # move servo based on class_idx
+                    # Open a serial connection to the Arduino
+                    #with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
                     # A brief pause to ensure the connection is ready
                     time.sleep(2)
                     # Send the command (e.g. "ON" or "OFF")
                     print("sending: " + str(class_idx) + "\n")
                     arduino.write((str(class_idx) + "\n").encode())
-        
-        del im, pred 
-        torch.cuda.empty_cache()
+            
+            del im, pred 
+            torch.cuda.empty_cache()
 
-        if cv2.waitKey(1) == ord('q'):
-            break
+            if cv2.waitKey(1) == ord('q'):
+                break
 
     # While True
         # capture image 
