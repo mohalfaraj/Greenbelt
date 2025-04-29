@@ -16,9 +16,11 @@ import serial
 # Define x-axis horizontal region (in pixels)
 x_min = 90
 x_max = 560
-y_min = 80 
+y_min = 0 
 y_max = 480 
-default_time = 4
+default_time = 4.5
+refresh_rate = 5
+last_move_default = False 
 
 def reduce_glare_clahe(frame):
     lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
@@ -40,8 +42,6 @@ def adaptive_gamma(frame):
 
     hsv_corrected = cv2.merge((h, s, v))
     return cv2.cvtColor(hsv_corrected, cv2.COLOR_HSV2BGR)
-
-
 
 def process_image(im, device): 
     if len(im.shape) > 3:
@@ -99,7 +99,7 @@ def main():
     weights = 'best_adam.torchscript'        # path to your .pt model
     source = '0'                  # webcam
     imgsz = [640, 640]            # input size
-    conf_thres = 0.5             # confidence threshold
+    conf_thres = 0.8             # confidence threshold
     iou_thres = 0.45              # NMS threshold
     classes_dict = {'Recyclable – Plastic': 102,
                     'Recyclable – Metal' : 101,
@@ -125,9 +125,9 @@ def main():
             #time.sleep(0.1)
             frame_count += 1
             #curr_time = time.time()
-           # print("seen image at time ", abs(curr_time - prev_time), "at frame ", frame_count)
-           # prev_time = curr_time
-            if frame_count % 10 != 0:
+            # print("seen image at time ", abs(curr_time - prev_time), "at frame ", frame_count)
+            # prev_time = curr_time
+            if frame_count % refresh_rate != 0:
                 continue
             
             #process_start_time = time.time()
@@ -171,6 +171,7 @@ def main():
                 # Print filtered class names
                 #ref = time.time() 
                 if filtered_classes:
+                    last_move_default = False
                     servo_move = time.time()
                     class_idx = classes_dict.get(filtered_classes, 104)
                     print(f"Detected: {filtered_classes} with index identifier {class_idx}")
@@ -183,6 +184,7 @@ def main():
                 # move back to default position just in case 
                 elif abs(servo_move - time.time()) > default_time:
                     servo_move = time.time()
+                    last_move_default = True 
                     class_idx = 104
                     # print(f"Moving back to trash position")
 

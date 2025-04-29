@@ -271,10 +271,10 @@ class LoadWebcam:  # for inference
 
         # Read frame
         ret_val, img0 = self.cap.read()
-        if self.background is None: 
-            self.background = img0.copy() 
+       # if self.background is None: 
+       #     self.background = img0.copy() 
 
-        img0 = self.deblur_motion_object(img0, self.background)
+       # img0 = self.deblur_motion_object(img0, self.background)
         img0 = cv2.flip(img0, 1)  # flip left-right
 
        #  img0 = letterbox(img0, new_shape=(640, 640), auto=False)[0]
