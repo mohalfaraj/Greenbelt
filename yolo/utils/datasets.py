@@ -251,13 +251,6 @@ class LoadWebcam:  # for inference
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, float(img_size))
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, float(img_size))
 
-        self.background = None 
-
-       # self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
-       # self.cap.set(cv2.CAP_PROP_EXPOSURE, -1)
-      #  self.cap.set(cv2.CAP_PROP_GAIN, 20)
-       # self.cap.set(cv2.CAP_PROP_BRIGHTNESS, 0.8)
-
     def __iter__(self):
         self.count = -1
         return self
@@ -271,13 +264,8 @@ class LoadWebcam:  # for inference
 
         # Read frame
         ret_val, img0 = self.cap.read()
-       # if self.background is None: 
-       #     self.background = img0.copy() 
 
-       # img0 = self.deblur_motion_object(img0, self.background)
         img0 = cv2.flip(img0, 1)  # flip left-right
-
-       #  img0 = letterbox(img0, new_shape=(640, 640), auto=False)[0]
 
         # Print
         assert ret_val, f'Camera Error {self.pipe}'
@@ -290,75 +278,12 @@ class LoadWebcam:  # for inference
         # Convert
         img = img[:,:,::-1]
         img = img.transpose((2,0,1))
-        # img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
         img = np.ascontiguousarray(img)
 
         return img_path, img, img0, None, s
 
     def __len__(self):
         return 0
-
-    def motion_blur_kernel(self, length, angle):
-        kernel = np.zeros((length, length))
-        kernel[(length - 1) // 2, :] = np.ones(length)
-        rot_mat = cv2.getRotationMatrix2D((length / 2, length / 2), angle, 1)
-        kernel = cv2.warpAffine(kernel, rot_mat, (length, length))
-        return kernel / kernel.sum()
-
-    def wiener_deconvolution(self, channel, kernel, K=0.01):
-        channel = channel.astype(np.float32)
-        dft_img = np.fft.fft2(channel)
-        dft_kernel = np.fft.fft2(kernel, s=channel.shape)
-        dft_kernel_conj = np.conj(dft_kernel)
-        result = dft_kernel_conj / (np.abs(dft_kernel)**2 + K) * dft_img
-        return np.abs(np.fft.ifft2(result))
-
-    def estimate_blur_parameters(self, fg_mask):
-        edges = cv2.Canny(fg_mask, 50, 150)
-        lines = cv2.HoughLines(edges, 1, np.pi / 180, 30)
-
-        if lines is None:
-            return 15, 0  # fallback values
-
-        angles = []
-        lengths = []
-
-        for rho, theta in lines[:, 0]:
-            angle = np.degrees(theta)
-            angles.append(angle)
-
-            # crude length estimate using projection (not true endpoint-based length)
-            a, b = np.cos(theta), np.sin(theta)
-            x1, y1 = int(a * rho + 1000 * (-b)), int(b * rho + 1000 * a)
-            x2, y2 = int(a * rho - 1000 * (-b)), int(b * rho - 1000 * a)
-            length = np.hypot(x2 - x1, y2 - y1)
-            lengths.append(length)
-
-        angle_est = np.median(angles) % 180  # avoid wrapping artifacts
-        length_est = int(np.clip(np.median(lengths), 5, 50))
-
-        return length_est, angle_est
-
-    def deblur_motion_object(self, current_frame, background_frame):
-        # Step 1: Get motion mask
-        diff = cv2.absdiff(current_frame, background_frame)
-        gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-        _, fg_mask = cv2.threshold(gray_diff, 30, 255, cv2.THRESH_BINARY)
-
-        # Step 2: Estimate blur parameters
-        length, angle = self.estimate_blur_parameters(fg_mask)
-
-        # Step 3: Create PSF kernel
-        kernel = self.motion_blur_kernel(length, angle)
-
-        # Step 4: Apply Wiener deconvolution to each channel
-        channels = cv2.split(current_frame)
-        deblurred_channels = [
-            np.clip(self.wiener_deconvolution(c, kernel), 0, 255).astype(np.uint8)
-            for c in channels
-        ]
-
-        return cv2.merge(deblurred_channels)
 
 
 class LoadStreams:
