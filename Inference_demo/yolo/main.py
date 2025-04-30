@@ -13,13 +13,14 @@ import time
 import os 
 import serial 
 
-# Define x-axis horizontal region (in pixels)
+# Image bounding lines that match where an object is on the belt
 x_min = 90
 x_max = 560
 y_min = 80 
 y_max = 480 
 default_time = 4
 
+# Image modulation function
 def reduce_glare_clahe(frame):
     lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
     l, a, b = cv2.split(lab)
@@ -30,6 +31,7 @@ def reduce_glare_clahe(frame):
     limg = cv2.merge((cl, a, b))
     return cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
 
+# Image modulation function
 def adaptive_gamma(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     h, s, v = cv2.split(hsv)
@@ -41,8 +43,8 @@ def adaptive_gamma(frame):
     hsv_corrected = cv2.merge((h, s, v))
     return cv2.cvtColor(hsv_corrected, cv2.COLOR_HSV2BGR)
 
-
-
+# Image processing function that calls the previous modulation
+# functions 
 def process_image(im, device): 
     if len(im.shape) > 3:
         im = im.squeeze(0)
@@ -57,15 +59,17 @@ def process_image(im, device):
         im = im.unsqueeze(0)
     return im 
 
-# TODO add extra toggles to determine when the servo should actually rotate 
+'''
+# Function that takes in the predictions made and filters them such that
+# only the object closest to the camera is returned to determine the servo
+# movement
+'''
 def filter_pred(det, im, im0, names, annotator, servo_move):
     filtered_classes = []
     if len(det):
         # Rescale boxes to original image size
         det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
         
-        # return class of closest prediction to camera (lowest y value) for filtered classes
-        # annotator SHOULD include all to display on UI 
         filtered_detections = []
 
         for *xyxy, conf, cls in det:
@@ -92,66 +96,56 @@ def filter_pred(det, im, im0, names, annotator, servo_move):
             filtered_classes = filtered_classes[0]
     return filtered_classes, annotator
 
+'''
+# Main function that initializes the model, grabs the camera input, runs inference,
+# and moves the servo accordingly. The function also writes to the UI. 
+'''
 def main():
     # model setup 
     debug = True 
     im_save_path = r'/home/jetson/Desktop/Capstone/capstone/static'
-    weights = 'best_adam.torchscript'        # path to your .pt model
+    weights = 'best_adam.torchscript' # path to model
     source = '0'                  # webcam
     imgsz = [640, 640]            # input size
     conf_thres = 0.5             # confidence threshold
     iou_thres = 0.45              # NMS threshold
+    # transforms material type to index that determines servo angle 
     classes_dict = {'Recyclable – Plastic': 102,
                     'Recyclable – Metal' : 101,
                     'Recyclable – Paper': 103}
+    # last timestamp servo was moved 
     servo_move = 0 
     arduino_port = '/dev/ttyACM0' 
 
     # Load model
     device = select_device('')
     model = DetectMultiBackend(weights, device=device)
-   # model.names = [name for _, name in sorted(model.names.items())]
     stride, names = model.stride, model.names
     imgsz = check_img_size(imgsz, s=stride)
 
     # Load webcam stream
     dataset = LoadWebcam(source, img_size=imgsz[0], stride=stride)
     frame_count = 0 
-    prev_time = time.time()
+
     with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
         time.sleep(2)
-        background_frame = None 
         for _, im, im0s, _, _ in dataset:
-            #time.sleep(0.1)
             frame_count += 1
-            #curr_time = time.time()
-           # print("seen image at time ", abs(curr_time - prev_time), "at frame ", frame_count)
-           # prev_time = curr_time
             if frame_count % 10 != 0:
                 continue
             
-            #process_start_time = time.time()
             im = process_image(im, device)
-            #print(f"took {time.time() - process_start_time} for processing")
 
-            #inference_start_time = time.time()
             with torch.no_grad():
                 pred = model(im)
                 pred = non_max_suppression(pred, conf_thres, iou_thres)
-            
-            #print(f"took {time.time() - inference_start_time} for inference")
-            
-            #post_start_time = time.time()
+                        
             for det in pred:   
                 im0 = im0s
                 annotator = Annotator(im0, line_width=2, example=str(names))
-                frame_width = im0.shape
                 
-                #ref = time.time()
                 filtered_classes, annotator = filter_pred(det, im, im0, names, annotator, servo_move)
                 
-               # print(f"took {time.time() - ref} for filter_pred")
-
                 # Draw vertical lines to visualize horizontal detection zone
                 if debug: 
                     # horizontal bounding lines
@@ -161,62 +155,28 @@ def main():
                     cv2.line(annotator.result(), (0, y_min), (im0.shape[1], y_min), (0, 255, 0), 2)
 
                 # sending to UI for display 
-                if debug: 
+                if not debug: 
                     cv2.imwrite(os.path.join(im_save_path, "tmp_frame.jpeg"), annotator.result())
                     os.replace(os.path.join(im_save_path, 'tmp_frame.jpeg'), os.path.join(im_save_path, "frame.jpeg"))
 
-                #if debug:
-                #    cv2.imshow("YOLOv5 Detection", annotator.result())
-
-                # Print filtered class names
-                #ref = time.time() 
                 if filtered_classes:
                     servo_move = time.time()
                     class_idx = classes_dict.get(filtered_classes, 104)
                     print(f"Detected: {filtered_classes} with index identifier {class_idx}")
 
-                    # move servo based on class_idx
-                    # Open a serial connection to the Arduino
-                    #with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
-                    # A brief pause to ensure the connection is ready
                     arduino.write((str(class_idx) + "\n").encode())
                 # move back to default position just in case 
                 elif abs(servo_move - time.time()) > default_time:
                     servo_move = time.time()
                     class_idx = 104
-                    # print(f"Moving back to trash position")
-
-                    # move servo based on class_idx
-                    # Open a serial connection to the Arduino
-                    #with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
-                    # A brief pause to ensure the connection is ready
+ 
                     arduino.write((str(class_idx) + "\n").encode())
-
-                #print(f"took {time.time() - ref} for arduino")
             
-           # print(f"time taken for post {time.time() - post_start_time}")
             del im, pred 
             torch.cuda.empty_cache()
 
             if cv2.waitKey(1) == ord('q'):
-                break
-
-    # While True
-        # capture image 
-        # run inference [function call]
-        # (maybe) check if obj at the end of belt (or some threshold)
-            # send to UI for display 
-            # if obj in plastic (0)
-                # rotate to 60 degrees
-            # if obj in metal (1)
-                # rotate to 60 degrees
-            # if obj in paper (2)
-                # rotate to 60 degrees
-            # if obj in trash (3)
-                # rotate to 60 degrees
-
-            # rotate ramp back to (3) for trash          
-    ...
+                break      
 
 if __name__ == '__main__':
     main()
