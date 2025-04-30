@@ -106,7 +106,7 @@ def main():
     # model setup 
     debug = True 
     im_save_path = r'/home/jetson/Desktop/Capstone/capstone/static'
-    weights = 'best_adam.torchscript' # path to model
+    weights = 'MRS.torchscript' # path to model
     source = '0'                  # webcam
     imgsz = [640, 640]            # input size
     conf_thres = 0.8             # confidence threshold
