@@ -16,9 +16,11 @@ import serial
 # Image bounding lines that match where an object is on the belt
 x_min = 90
 x_max = 560
-y_min = 80 
+y_min = 0 
 y_max = 480 
-default_time = 4
+default_time = 4.5
+refresh_rate = 5
+last_move_default = False 
 
 # Image modulation function
 def reduce_glare_clahe(frame):
@@ -107,7 +109,7 @@ def main():
     weights = 'best_adam.torchscript' # path to model
     source = '0'                  # webcam
     imgsz = [640, 640]            # input size
-    conf_thres = 0.5             # confidence threshold
+    conf_thres = 0.8             # confidence threshold
     iou_thres = 0.45              # NMS threshold
     # transforms material type to index that determines servo angle 
     classes_dict = {'Recyclable – Plastic': 102,
@@ -131,7 +133,10 @@ def main():
         time.sleep(2)
         for _, im, im0s, _, _ in dataset:
             frame_count += 1
-            if frame_count % 10 != 0:
+            #curr_time = time.time()
+            # print("seen image at time ", abs(curr_time - prev_time), "at frame ", frame_count)
+            # prev_time = curr_time
+            if frame_count % refresh_rate != 0:
                 continue
             
             im = process_image(im, device)
@@ -160,6 +165,7 @@ def main():
                     os.replace(os.path.join(im_save_path, 'tmp_frame.jpeg'), os.path.join(im_save_path, "frame.jpeg"))
 
                 if filtered_classes:
+                    last_move_default = False
                     servo_move = time.time()
                     class_idx = classes_dict.get(filtered_classes, 104)
                     print(f"Detected: {filtered_classes} with index identifier {class_idx}")
@@ -168,6 +174,7 @@ def main():
                 # move back to default position just in case 
                 elif abs(servo_move - time.time()) > default_time:
                     servo_move = time.time()
+                    last_move_default = True 
                     class_idx = 104
  
                     arduino.write((str(class_idx) + "\n").encode())
