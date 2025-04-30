@@ -20,7 +20,6 @@ y_min = 0
 y_max = 480 
 default_time = 4.5
 refresh_rate = 5
-last_move_default = False 
 
 # Image modulation function
 def reduce_glare_clahe(frame):
@@ -44,9 +43,10 @@ def adaptive_gamma(frame):
 
     hsv_corrected = cv2.merge((h, s, v))
     return cv2.cvtColor(hsv_corrected, cv2.COLOR_HSV2BGR)
-
+'''
 # Image processing function that calls the previous modulation
 # functions 
+'''
 def process_image(im, device): 
     if len(im.shape) > 3:
         im = im.squeeze(0)
@@ -133,9 +133,7 @@ def main():
         time.sleep(2)
         for _, im, im0s, _, _ in dataset:
             frame_count += 1
-            #curr_time = time.time()
-            # print("seen image at time ", abs(curr_time - prev_time), "at frame ", frame_count)
-            # prev_time = curr_time
+            # grab image every refresh_rate frames
             if frame_count % refresh_rate != 0:
                 continue
             
@@ -151,7 +149,7 @@ def main():
                 
                 filtered_classes, annotator = filter_pred(det, im, im0, names, annotator, servo_move)
                 
-                # Draw vertical lines to visualize horizontal detection zone
+                # debug: draw vertical lines to visualize horizontal detection zone
                 if debug: 
                     # horizontal bounding lines
                     cv2.line(annotator.result(), (x_min, 0), (x_min, im0.shape[0]), (0, 255, 0), 2)
@@ -159,22 +157,21 @@ def main():
                     # vertical bounding line 
                     cv2.line(annotator.result(), (0, y_min), (im0.shape[1], y_min), (0, 255, 0), 2)
 
-                # sending to UI for display 
+                # otherwise: sending to UI for display 
                 if not debug: 
                     cv2.imwrite(os.path.join(im_save_path, "tmp_frame.jpeg"), annotator.result())
                     os.replace(os.path.join(im_save_path, 'tmp_frame.jpeg'), os.path.join(im_save_path, "frame.jpeg"))
 
+                # if there are items on the belt move servo based on item type 
                 if filtered_classes:
-                    last_move_default = False
                     servo_move = time.time()
                     class_idx = classes_dict.get(filtered_classes, 104)
                     print(f"Detected: {filtered_classes} with index identifier {class_idx}")
 
                     arduino.write((str(class_idx) + "\n").encode())
-                # move back to default position just in case 
+                # move back to default position if there is not an item 
                 elif abs(servo_move - time.time()) > default_time:
                     servo_move = time.time()
-                    last_move_default = True 
                     class_idx = 104
  
                     arduino.write((str(class_idx) + "\n").encode())
@@ -187,4 +184,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
