@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 from models.common import DetectMultiBackend
-from utils.datasets import LoadStreams, LoadWebcam
+from utils.datasets import LoadWebcam
 from utils.general import check_img_size, non_max_suppression, scale_coords, cv2
 from utils.torch_utils import select_device
 from utils.general import xyxy2xywh
@@ -109,7 +109,7 @@ def main():
     weights = 'MRS.torchscript' # path to model
     source = '0'                  # webcam
     imgsz = [640, 640]            # input size
-    conf_thres = 0.8             # confidence threshold
+    conf_thres = 0.8              # confidence threshold
     iou_thres = 0.45              # NMS threshold
     # transforms material type to index that determines servo angle 
     classes_dict = {'Recyclable – Plastic': 102,
@@ -128,59 +128,62 @@ def main():
     # Load webcam stream
     dataset = LoadWebcam(source, img_size=imgsz[0], stride=stride)
     frame_count = 0 
+    arduino = serial.Serial(arduino_port, 9600, timeout=2)
+    # 2 second wait for Arduino initialization
+    time.sleep(2)
 
-    with serial.Serial(arduino_port, 9600, timeout=2) as arduino:
-        time.sleep(2)
-        for _, im, im0s, _, _ in dataset:
-            frame_count += 1
-            # grab image every refresh_rate frames
-            if frame_count % refresh_rate != 0:
-                continue
-            
-            im = process_image(im, device)
+    for _, im, im0s, _, _ in dataset:
+        frame_count += 1
+        # grab image every refresh_rate frames
+        if frame_count % refresh_rate != 0:
+            continue
+        
+        # image filtering 
+        im = process_image(im, device)
+        
+        # inference
+        with torch.no_grad():
+            pred = model(im)
+            pred = non_max_suppression(pred, conf_thres, iou_thres)
+                    
+        det = pred[0]   
+        im0 = im0s
+        annotator = Annotator(im0, line_width=2, example=str(names))
+        
+        filtered_classes, annotator = filter_pred(det, im, im0, names, annotator, servo_move)
+        
+        # debug: draw vertical lines to visualize horizontal detection zone
+        if debug: 
+            # horizontal bounding lines
+            cv2.line(annotator.result(), (x_min, 0), (x_min, im0.shape[0]), (0, 255, 0), 2)
+            cv2.line(annotator.result(), (x_max, 0), (x_max, im0.shape[0]), (0, 255, 0), 2)
+            # vertical bounding line 
+            cv2.line(annotator.result(), (0, y_min), (im0.shape[1], y_min), (0, 255, 0), 2)
 
-            with torch.no_grad():
-                pred = model(im)
-                pred = non_max_suppression(pred, conf_thres, iou_thres)
-                        
-            for det in pred:   
-                im0 = im0s
-                annotator = Annotator(im0, line_width=2, example=str(names))
-                
-                filtered_classes, annotator = filter_pred(det, im, im0, names, annotator, servo_move)
-                
-                # debug: draw vertical lines to visualize horizontal detection zone
-                if debug: 
-                    # horizontal bounding lines
-                    cv2.line(annotator.result(), (x_min, 0), (x_min, im0.shape[0]), (0, 255, 0), 2)
-                    cv2.line(annotator.result(), (x_max, 0), (x_max, im0.shape[0]), (0, 255, 0), 2)
-                    # vertical bounding line 
-                    cv2.line(annotator.result(), (0, y_min), (im0.shape[1], y_min), (0, 255, 0), 2)
+        # otherwise: sending to UI for display 
+        if not debug: 
+            cv2.imwrite(os.path.join(im_save_path, "tmp_frame.jpeg"), annotator.result())
+            os.replace(os.path.join(im_save_path, 'tmp_frame.jpeg'), os.path.join(im_save_path, "frame.jpeg"))
 
-                # otherwise: sending to UI for display 
-                if not debug: 
-                    cv2.imwrite(os.path.join(im_save_path, "tmp_frame.jpeg"), annotator.result())
-                    os.replace(os.path.join(im_save_path, 'tmp_frame.jpeg'), os.path.join(im_save_path, "frame.jpeg"))
+        # if there are items on the belt move servo based on item type 
+        if filtered_classes:
+            servo_move = time.time()
+            class_idx = classes_dict.get(filtered_classes, 104)
+            print(f"Detected: {filtered_classes} with index identifier {class_idx}")
 
-                # if there are items on the belt move servo based on item type 
-                if filtered_classes:
-                    servo_move = time.time()
-                    class_idx = classes_dict.get(filtered_classes, 104)
-                    print(f"Detected: {filtered_classes} with index identifier {class_idx}")
+            arduino.write((str(class_idx) + "\n").encode())
+        # move back to default position if there is not an item 
+        elif abs(servo_move - time.time()) > default_time:
+            servo_move = time.time()
+            class_idx = 104
 
-                    arduino.write((str(class_idx) + "\n").encode())
-                # move back to default position if there is not an item 
-                elif abs(servo_move - time.time()) > default_time:
-                    servo_move = time.time()
-                    class_idx = 104
- 
-                    arduino.write((str(class_idx) + "\n").encode())
-            
-            del im, pred 
-            torch.cuda.empty_cache()
+            arduino.write((str(class_idx) + "\n").encode())
+        
+        del im, pred 
+        torch.cuda.empty_cache()
 
-            if cv2.waitKey(1) == ord('q'):
-                break      
+        if cv2.waitKey(1) == ord('q'):
+            break      
 
 if __name__ == '__main__':
     main()
